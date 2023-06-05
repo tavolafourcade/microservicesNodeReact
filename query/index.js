@@ -8,14 +8,7 @@ app.use(cors())
 
 const posts = {}
 
-app.get('/posts', (req, res) => {
-  res.send(posts)
-})
-
-// Receive events from event bus
-app.post('/events', (req, res) => {
-  const { type, data } = req.body
-
+const handleEvent = (type, data) => {
   if (type === 'PostCreated') {
     const { id, title } = data
     posts[id] = { id, title, comments: [] }
@@ -37,10 +30,30 @@ app.post('/events', (req, res) => {
     comment.content = content
   }
 
-  console.log(posts)
+}
+
+app.get('/posts', (req, res) => {
+  res.send(posts)
+})
+
+// Receive events from event bus
+app.post('/events', (req, res) => {
+  const { type, data } = req.body
+
+  handleEvent(type, data)
+
   res.send({})
 })
 
-app.listen(4002, () => {
+app.listen(4002, async () => {
   console.log('Listening on 4002')
+
+
+  // Sync with event bus
+  const res = axios.get('http://localhost:4005/events').then((res) => {
+    for (let event of res.data){
+      console.log('Processing event:', event.type)
+      handleEvent(event.type, event.data)
+    }
+  }) 
 })
